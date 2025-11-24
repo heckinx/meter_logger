@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include <WiFi.h>
 #include <Ticker.h>
-#include <AsyncMQTTClient.h>
+#include <AsyncMqttClient.h>
 #include <ArduinoOTA.h>
 #include <EEPROM.h>
 #include <ArduinoJson.h>
@@ -40,32 +40,32 @@ int pulsePin2 = 40;
 int pulsePin3 = 41;
 int pulsePin4 = 42;
 
-volatile uint32_t pulseCount1 = 0; // 74577850;
-int lastPulseCount1 = 0;
+volatile unsigned long pulseCount1 = 74577850;
+unsigned long lastPulseCount1 = 0;
 volatile double power1 = 0;
 volatile unsigned long startMillis1 = 0;
 volatile unsigned long lastDeltaT1 = 0;
 volatile unsigned long raisingTime1 = 0;
 bool hasPulsed1 = false;
 
-volatile uint32_t pulseCount2 = 0; // 23107670;
-int lastPulseCount2 = 0;
+volatile unsigned long pulseCount2 = 23107670;
+unsigned long lastPulseCount2 = 0;
 volatile double power2 = 0;
 volatile unsigned long startMillis2 = 0;
 volatile unsigned long lastDeltaT2 = 0;
 volatile unsigned long raisingTime2 = 0;
 bool hasPulsed2 = false;
 
-volatile uint32_t pulseCount3 = 0; // 27646810;
-int lastPulseCount3 = 0;
+volatile unsigned long pulseCount3 = 27646810;
+unsigned long lastPulseCount3 = 0;
 volatile double power3 = 0;
 volatile unsigned long startMillis3 = 0;
 volatile unsigned long lastDeltaT3 = 0;
 volatile unsigned long raisingTime3 = 0;
 bool hasPulsed3 = false;
 
-volatile uint32_t pulseCount4 = 0; // 119451120;
-int lastPulseCount4 = 0;
+volatile unsigned long pulseCount4 = 119451120;
+unsigned long lastPulseCount4 = 0;
 volatile double power4 = 0;
 volatile unsigned long startMillis4 = 0;
 volatile unsigned long lastDeltaT4 = 0;
@@ -108,10 +108,10 @@ void setup() {
 
   delay(2000);
 
-  EEPROM.get(0, pulseCount1);
-  EEPROM.get(32, pulseCount2);
+  // EEPROM.get(0, pulseCount1);
+  // EEPROM.get(32, pulseCount2);
   // EEPROM.get(64, pulseCount3);
-  EEPROM.get(96, pulseCount4);
+  // EEPROM.get(96, pulseCount4);
 
   lastPulseCount1 = pulseCount1;
   lastPulseCount2 = pulseCount2;
