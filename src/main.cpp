@@ -9,8 +9,8 @@
 #include "time.h"
 #define DEBUG
 
-const char* ssid = "RW_2.4G";
-const char* password = "12345678";
+const char* ssid = "RW";
+const char* password = "5l3t5j0MTZHz";
 // const char* ssid = "TP-Link_A894";
 // const char* password = "1223334444";
 
@@ -40,33 +40,33 @@ int pulsePin2 = 40;
 int pulsePin3 = 41;
 int pulsePin4 = 42;
 
-volatile unsigned long pulseCount1 = 74577850;
-unsigned long lastPulseCount1 = 0;
-volatile double power1 = 0;
+volatile uint32_t addPulses1 = 0;
+uint32_t pulseCount1 = 74577850;
+double power1 = 0;
 volatile unsigned long startMillis1 = 0;
 volatile unsigned long lastDeltaT1 = 0;
 volatile unsigned long raisingTime1 = 0;
 bool hasPulsed1 = false;
 
-volatile unsigned long pulseCount2 = 23107670;
-unsigned long lastPulseCount2 = 0;
-volatile double power2 = 0;
+volatile uint32_t addPulses2 = 0;
+uint32_t pulseCount2 = 23107670;
+double power2 = 0;
 volatile unsigned long startMillis2 = 0;
 volatile unsigned long lastDeltaT2 = 0;
 volatile unsigned long raisingTime2 = 0;
 bool hasPulsed2 = false;
 
-volatile unsigned long pulseCount3 = 27646810;
-unsigned long lastPulseCount3 = 0;
-volatile double power3 = 0;
+volatile uint32_t addPulses3 = 0;
+uint32_t pulseCount3 = 27646810;
+double power3 = 0;
 volatile unsigned long startMillis3 = 0;
 volatile unsigned long lastDeltaT3 = 0;
 volatile unsigned long raisingTime3 = 0;
 bool hasPulsed3 = false;
 
-volatile unsigned long pulseCount4 = 119451120;
-unsigned long lastPulseCount4 = 0;
-volatile double power4 = 0;
+volatile uint32_t addPulses4 = 0;
+uint32_t pulseCount4 = 119451120;
+double power4 = 0;
 volatile unsigned long startMillis4 = 0;
 volatile unsigned long lastDeltaT4 = 0;
 volatile unsigned long raisingTime4 = 0;
@@ -75,10 +75,10 @@ bool hasPulsed4 = false;
 unsigned long getTime();
 void updateData();
 void lcdSetup();
-void inttr1();
-void inttr2();
-void inttr3();
-void inttr4();
+void IRAM_ATTR inttr1();
+void IRAM_ATTR inttr2();
+void IRAM_ATTR inttr3();
+void IRAM_ATTR inttr4();
 void publish(const char* topic, const char* measurement, JsonDocument data);
 void netSetup();
 void connectToWifi();
@@ -92,9 +92,28 @@ void setupOTA();
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(1, 2);
 
   EEPROM.begin(256);
+
+  delay(2000);
+
+  EEPROM.get(0, pulseCount1);
+  EEPROM.get(32, pulseCount2);
+  EEPROM.get(64, pulseCount3);
+  EEPROM.get(96, pulseCount4);
+  // EEPROM.put(0, pulseCount1);
+  // EEPROM.put(32, pulseCount2);
+  // EEPROM.put(64, pulseCount3);
+  // EEPROM.put(96, pulseCount4);
+  // EEPROM.commit();
+
+  // Serial.println(pulseCount1);
+  // Serial.println(pulseCount2);
+
+  lcdSetup();
+  netSetup();
+
+  connectToWifi();
 
   pinMode(pulsePin1, INPUT);
   pinMode(pulsePin2, INPUT);
@@ -105,25 +124,6 @@ void setup() {
   attachInterrupt(pulsePin2, inttr2, CHANGE);
   attachInterrupt(pulsePin3, inttr3, CHANGE);
   attachInterrupt(pulsePin4, inttr4, CHANGE);
-
-  delay(2000);
-
-  // EEPROM.get(0, pulseCount1);
-  // EEPROM.get(32, pulseCount2);
-  // EEPROM.get(64, pulseCount3);
-  // EEPROM.get(96, pulseCount4);
-
-  lastPulseCount1 = pulseCount1;
-  lastPulseCount2 = pulseCount2;
-  lastPulseCount3 = pulseCount3;
-  lastPulseCount4 = pulseCount4;
-  // Serial.println(pulseCount1);
-  // Serial.println(pulseCount2);
-
-  lcdSetup();
-  netSetup();
-
-  connectToWifi();
 }
 
 void loop() {
@@ -143,27 +143,31 @@ unsigned long getTime() {
 }
 
 void updateData() {
-  if (lastPulseCount1 != pulseCount1) {
+  if (addPulses1 > 0) {
+    pulseCount1 += addPulses1;
+    addPulses1 = 0;
     EEPROM.put(0, pulseCount1);
-    lastPulseCount1 = pulseCount1;
     EEPROM.commit();
     hasPulsed1 = true;
   }
-  if (lastPulseCount2 != pulseCount2) {
+  if (addPulses2 > 0) {
+    pulseCount2 += addPulses2;
+    addPulses2 = 0;
     EEPROM.put(32, pulseCount2);
-    lastPulseCount2 = pulseCount2;
     EEPROM.commit();
     hasPulsed2 = true;
   }
-  if (lastPulseCount3 != pulseCount3) {
+  if (addPulses3 > 0) {
+    pulseCount3 += addPulses3;
+    addPulses3 = 0;
     EEPROM.put(64, pulseCount3);
-    lastPulseCount3 = pulseCount3;
     EEPROM.commit();
     hasPulsed3 = true;
   }
-  if (lastPulseCount4 != pulseCount4) {
+  if (addPulses4 > 0) {
+    pulseCount4 += addPulses4;
+    addPulses4 = 0;
     EEPROM.put(96, pulseCount4);
-    lastPulseCount4 = pulseCount4;
     EEPROM.commit();
     hasPulsed4 = true;
   }
@@ -245,6 +249,7 @@ void updateData() {
 }
 
 void lcdSetup() {
+  Wire.begin(1, 2);
   u8g2.setI2CAddress(0x7E);
   u8g2.begin();
   u8g2.setContrast(200);
@@ -254,7 +259,7 @@ void lcdSetup() {
   u8g2.setPowerSave(1);
 }
 
-void inttr1() {
+void IRAM_ATTR inttr1() {
   if (digitalRead(pulsePin1) == HIGH) {
     raisingTime1 = millis();
   } else {
@@ -264,12 +269,12 @@ void inttr1() {
       // Serial.println((millis()-startMillis1));
       lastDeltaT1 = millis() - startMillis1;
       startMillis1 = millis();
-      pulseCount1 += 1;
+      addPulses1 += 1;
     }
   }
 }
 
-void inttr2() {
+void IRAM_ATTR inttr2() {
   if (digitalRead(pulsePin2) == HIGH) {
     raisingTime2 = millis();
   } else {
@@ -278,12 +283,12 @@ void inttr2() {
     if (pulseTime <= 82 && pulseTime >= 78) {
       lastDeltaT2 = millis() - startMillis2;
       startMillis2 = millis();
-      pulseCount2 += 1;
+      addPulses2 += 1;
     }
   }
 }
 
-void inttr3() {
+void IRAM_ATTR inttr3() {
   if (digitalRead(pulsePin3) == HIGH) {
     raisingTime3 = millis();
   } else {
@@ -293,12 +298,12 @@ void inttr3() {
       // Serial.println((millis()-startMillis1));
       lastDeltaT3 = millis() - startMillis3;
       startMillis3 = millis();
-      pulseCount3 += 1;
+      addPulses3 += 1;
     }
   }
 }
 
-void inttr4() {
+void IRAM_ATTR inttr4() {
   if (digitalRead(pulsePin4) == HIGH) {
     raisingTime4 = millis();
   } else {
@@ -306,7 +311,7 @@ void inttr4() {
     if (pulseTime <= 35 && pulseTime >= 31) {
       lastDeltaT4 = millis() - startMillis4;
       startMillis4 = millis();
-      pulseCount4 += 1;
+      addPulses4 += 1;
     }
   }
 }
@@ -430,6 +435,7 @@ void setupOTA() {
 
   ArduinoOTA
     .onStart([]() {
+      noInterrupts();
       String type;
       if (ArduinoOTA.getCommand() == U_FLASH)
         type = "sketch";
@@ -441,6 +447,7 @@ void setupOTA() {
     })
     .onEnd([]() {
       Serial.println("\nEnd");
+      interrupts();
     })
     .onProgress([](unsigned int progress, unsigned int total) {
       Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
@@ -452,6 +459,7 @@ void setupOTA() {
       else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
       else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
       else if (error == OTA_END_ERROR) Serial.println("End Failed");
+      interrupts();
     });
 
   ArduinoOTA.begin();
