@@ -41,25 +41,25 @@ int pulsePin3 = 41; // Dom 2
 int pulsePin4 = 42; // Growatt
 
 volatile unsigned long addPulses1 = 0;
-unsigned long pulseCount1 = 74600040;
+unsigned long pulseCount1 = 0; // 74600040;
 double power1 = 0;
 volatile unsigned long startMillis1 = 0;
 volatile unsigned long lastDeltaT1 = 0;
 
 volatile unsigned long addPulses2 = 0;
-unsigned long pulseCount2 = 23107670;
+unsigned long pulseCount2 = 0; // 23107670;
 double power2 = 0;
 volatile unsigned long startMillis2 = 0;
 volatile unsigned long lastDeltaT2 = 0;
 
 volatile unsigned long addPulses3 = 0;
-unsigned long pulseCount3 = 27655360;
+unsigned long pulseCount3 = 0; // 27655360;
 double power3 = 0;
 volatile unsigned long startMillis3 = 0;
 volatile unsigned long lastDeltaT3 = 0;
 
 volatile unsigned long addPulses4 = 0;
-unsigned long pulseCount4 = 119452830;
+unsigned long pulseCount4 = 0; // 119452830;
 double power4 = 0;
 volatile unsigned long startMillis4 = 0;
 volatile unsigned long lastDeltaT4 = 0;
@@ -98,7 +98,7 @@ void setup() {
   // EEPROM.put(64, pulseCount2);
   // EEPROM.put(128, pulseCount3);
   // EEPROM.put(192, pulseCount4);
-  EEPROM.commit();
+  // EEPROM.commit();
 
   // Serial.println(pulseCount1);
   // Serial.println(pulseCount2);
@@ -137,72 +137,88 @@ unsigned long getTime() {
   return now;
 }
 
+bool pulsedTwice1 = false;
+bool pulsedTwice2 = false;
+bool pulsedTwice3 = false;
+bool pulsedTwice4 = false;
+
 void updateData() {
   // testMillisStart = millis();
   //noInterrupts();
-  if (addPulses1 > 0) {
+  if (addPulses1 > 1) {
     pulseCount1 += addPulses1;
     addPulses1 = 0;
     EEPROM.put(0, pulseCount1);
+    pulsedTwice1 = true;
   }
-  if (addPulses2 > 0) {
+  if (addPulses2 > 1) {
     pulseCount2 += addPulses2;
     addPulses2 = 0;
     EEPROM.put(64, pulseCount2);
+    pulsedTwice2 = true;
   }
-  if (addPulses3 > 0) {
+  if (addPulses3 > 1) {
     pulseCount3 += addPulses3;
     addPulses3 = 0;
     EEPROM.put(128, pulseCount3);
+    pulsedTwice3 = true;
   }
-  if (addPulses4 > 0) {
+  if (addPulses4 > 1) {
     pulseCount4 += addPulses4;
     addPulses4 = 0;
     EEPROM.put(192, pulseCount4);
+    pulsedTwice4 = true;
   }
 
   EEPROM.commit();
   //interrupts();
 
-
-  if(millis() - startMillis1 > lastDeltaT1) {
-    if(millis() - startMillis1 > 60000) {
-      power1 = 0.00f;
+  if(lastDeltaT1 > 0 && pulsedTwice1) {
+    if(millis() - startMillis1 > lastDeltaT1) {
+      if(millis() - startMillis1 > 60000) {
+        power1 = 0.00f;
+      } else {
+        power1 = 3600.00f/((millis()-startMillis1)/1000.00f);
+      }
     } else {
-      power1 = 3600.00f/((millis()-startMillis1)/1000.00f);
+      power1 = 3600.00f/(lastDeltaT1/1000.00f);
     }
-  } else if (lastDeltaT1 > 0) {
-    power1 = 3600.00f/(lastDeltaT1/1000.00f);
   }
 
-  if(millis() - startMillis2 > lastDeltaT2) {
-    if(millis() - startMillis2 > 60000) {
-      power2 = 0.00f;
+  if(lastDeltaT2 > 0 && pulsedTwice2) {
+    if(millis() - startMillis2 > lastDeltaT2) {
+      if(millis() - startMillis2 > 60000) {
+        power2 = 0.00f;
+      } else {
+        power2 = 3600.00f/((millis()-startMillis2)/1000.00f);
+      }
     } else {
-      power2 = 3600.00f/((millis()-startMillis2)/1000.00f);
+      power2 = 3600.00f/(lastDeltaT2/1000.00f);
     }
-  } else if (lastDeltaT2 > 0) {
-    power2 = 3600.00f/(lastDeltaT2/1000.00f);
   }
 
-  if(millis() - startMillis3 > lastDeltaT3) {
-    if(millis() - startMillis3 > 60000) {
-      power3 = 0.00f;
+  if(lastDeltaT3 > 0 && pulsedTwice3) {
+    if(millis() - startMillis3 > lastDeltaT3) {
+      if(millis() - startMillis3 > 60000) {
+        power3 = 0.00f;
+      } else {
+        power3 = 3600.00f/((millis()-startMillis3)/1000.00f);
+      }
     } else {
-      power3 = 3600.00f/((millis()-startMillis3)/1000.00f);
+      power3 = 3600.00f/(lastDeltaT3/1000.00f);
     }
-  } else if (lastDeltaT3 > 0) {
-    power3 = 3600.00f/(lastDeltaT3/1000.00f);
   }
 
-  if(millis() - startMillis4 > lastDeltaT4) {
-    if(millis() - startMillis4 > 60000) {
-      power4 = 0.00f;
+  if(lastDeltaT4 > 0 && pulsedTwice4) {
+    if(millis() - startMillis4 > lastDeltaT4) {
+      if(millis() - startMillis4 > 60000) {
+        power4 = 0.00f;
+      } else {
+        power4 = 3600.00f/((millis()-startMillis4)/1000.00f);
+      }
     } else {
-      power4 = 3600.00f/((millis()-startMillis4)/1000.00f);
+      power4 = 3600.00f/(lastDeltaT4/1000.00f);
     }
-  } else if (lastDeltaT4 > 0) {
-    power4 = 3600.00f/(lastDeltaT4/1000.00f);
   }
 
   doc["data"]["meter1_power"] = (double)power1;
@@ -333,6 +349,7 @@ void netSetup() {
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onMessage(onMqttMessage);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  mqttClient.setWill("status/esp32_node", 1, true, "{\"status\": \"offline\"}");
   configTime(0, 0, ntpServer);
 }
 
@@ -382,6 +399,7 @@ void onMqttConnect(bool sessionPresent) {
   // Serial.print("Subscribing at QoS 2, packetId: ");
   // Serial.println(packetIdSub);
   mqttClient.subscribe("config/esp32_node", 1);
+  mqttClient.publish("status/esp32_node", 1, true, "{\"status\": \"online\"}");
   timer.attach(dataInterval, updateData);
 }
 
@@ -409,20 +427,20 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
 #endif
   deserializeJson(configDoc, m_str);
   if(configDoc["command"] == "set_pulses") {
-    if(configDoc["meter1_pulses"] != NULL) {
-      pulseCount1 = configDoc["meter1_pulses"].as<unsigned long>();
+    if(!configDoc["meter1"].isNull() && configDoc["meter1"].as<long>() > 0) {
+      pulseCount1 = configDoc["meter1"].as<unsigned long>();
       EEPROM.put(0, pulseCount1);
     }
-    if(configDoc["meter2_pulses"] != NULL) {
-      pulseCount2 = configDoc["meter2_pulses"].as<unsigned long>();
+    if(!configDoc["meter2"].isNull() && configDoc["meter2"].as<long>() > 0) {
+      pulseCount2 = configDoc["meter2"].as<unsigned long>();
       EEPROM.put(64, pulseCount2);
     }
-    if(configDoc["meter3_pulses"] != NULL) {
-      pulseCount3 = configDoc["meter3_pulses"].as<unsigned long>();
+    if(!configDoc["meter3"].isNull() && configDoc["meter3"].as<long>() > 0) {
+      pulseCount3 = configDoc["meter3"].as<unsigned long>();
       EEPROM.put(128, pulseCount3);
     }
-    if(configDoc["meter4_pulses"] != NULL) {
-      pulseCount4 = configDoc["meter4_pulses"].as<unsigned long>();
+    if(!configDoc["meter4"].isNull() && configDoc["meter4"].as<long>() > 0) {
+      pulseCount4 = configDoc["meter4"].as<unsigned long>();
       EEPROM.put(192, pulseCount4);
     }
     EEPROM.commit();
