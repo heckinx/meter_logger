@@ -1,5 +1,5 @@
-#include <U8g2lib.h>
-#include <Wire.h>
+// #include <U8g2lib.h>
+// #include <Wire.h>
 #include <WiFi.h>
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
@@ -22,7 +22,7 @@ Ticker wifiReconnectTimer;
 
 Ticker timer;
 
-U8G2_ST7567_ENH_DG128064I_F_HW_I2C u8g2(U8G2_R2, U8X8_PIN_NONE);
+// U8G2_ST7567_ENH_DG128064I_F_HW_I2C u8g2(U8G2_R2, U8X8_PIN_NONE);
 
 JsonDocument doc;
 
@@ -35,46 +35,38 @@ const int dataInterval = 5;
 
 #define DEVICE_ID "A3JEO36GA9"
 
-int pulsePin1 = 39;
-int pulsePin2 = 40;
-int pulsePin3 = 41;
-int pulsePin4 = 42;
+int pulsePin1 = 39; // Dom 1
+int pulsePin2 = 40; // PC
+int pulsePin3 = 41; // Dom 2
+int pulsePin4 = 42; // Growatt
 
-volatile uint32_t addPulses1 = 0;
-uint32_t pulseCount1 = 74577850;
+volatile unsigned long addPulses1 = 0;
+unsigned long pulseCount1 = 74600040;
 double power1 = 0;
 volatile unsigned long startMillis1 = 0;
 volatile unsigned long lastDeltaT1 = 0;
-volatile unsigned long raisingTime1 = 0;
-bool hasPulsed1 = false;
 
-volatile uint32_t addPulses2 = 0;
-uint32_t pulseCount2 = 23107670;
+volatile unsigned long addPulses2 = 0;
+unsigned long pulseCount2 = 23107670;
 double power2 = 0;
 volatile unsigned long startMillis2 = 0;
 volatile unsigned long lastDeltaT2 = 0;
-volatile unsigned long raisingTime2 = 0;
-bool hasPulsed2 = false;
 
-volatile uint32_t addPulses3 = 0;
-uint32_t pulseCount3 = 27646810;
+volatile unsigned long addPulses3 = 0;
+unsigned long pulseCount3 = 27655360;
 double power3 = 0;
 volatile unsigned long startMillis3 = 0;
 volatile unsigned long lastDeltaT3 = 0;
-volatile unsigned long raisingTime3 = 0;
-bool hasPulsed3 = false;
 
-volatile uint32_t addPulses4 = 0;
-uint32_t pulseCount4 = 119451120;
+volatile unsigned long addPulses4 = 0;
+unsigned long pulseCount4 = 119452830;
 double power4 = 0;
 volatile unsigned long startMillis4 = 0;
 volatile unsigned long lastDeltaT4 = 0;
-volatile unsigned long raisingTime4 = 0;
-bool hasPulsed4 = false;
 
 unsigned long getTime();
 void updateData();
-void lcdSetup();
+// void lcdSetup();
 void inttr1();
 void inttr2();
 void inttr3();
@@ -93,38 +85,41 @@ void setupOTA();
 void setup() {
   Serial.begin(115200);
 
-  EEPROM.begin(256);
+  EEPROM.begin(512);
 
-  delay(2000);
+  // delay(2000);
 
   EEPROM.get(0, pulseCount1);
-  EEPROM.get(32, pulseCount2);
-  EEPROM.get(64, pulseCount3);
-  EEPROM.get(96, pulseCount4);
+  // EEPROM.get(64, pulseCount2);
+  EEPROM.get(128, pulseCount3);
+  EEPROM.get(192, pulseCount4);
+
   // EEPROM.put(0, pulseCount1);
-  // EEPROM.put(32, pulseCount2);
-  // EEPROM.put(64, pulseCount3);
-  // EEPROM.put(96, pulseCount4);
-  // EEPROM.commit();
+  EEPROM.put(64, pulseCount2);
+  // EEPROM.put(128, pulseCount3);
+  // EEPROM.put(192, pulseCount4);
+  EEPROM.commit();
 
   // Serial.println(pulseCount1);
   // Serial.println(pulseCount2);
 
-  lcdSetup();
+  // lcdSetup();
   netSetup();
 
   connectToWifi();
 
-  pinMode(pulsePin1, INPUT);
-  pinMode(pulsePin2, INPUT);
-  pinMode(pulsePin3, INPUT);
-  pinMode(pulsePin4, INPUT);
+  pinMode(pulsePin1, INPUT_PULLUP);
+  pinMode(pulsePin2, INPUT_PULLUP);
+  pinMode(pulsePin3, INPUT_PULLUP);
+  pinMode(pulsePin4, INPUT_PULLUP);
 
-  attachInterrupt(pulsePin1, inttr1, CHANGE);
-  attachInterrupt(pulsePin2, inttr2, CHANGE);
-  attachInterrupt(pulsePin3, inttr3, CHANGE);
-  attachInterrupt(pulsePin4, inttr4, CHANGE);
+  attachInterrupt(pulsePin1, inttr1, FALLING);
+  attachInterrupt(pulsePin2, inttr2, FALLING);
+  attachInterrupt(pulsePin3, inttr3, FALLING);
+  attachInterrupt(pulsePin4, inttr4, FALLING);
 }
+
+long testMillisStart = 0;
 
 void loop() {
   ArduinoOTA.handle();
@@ -143,36 +138,34 @@ unsigned long getTime() {
 }
 
 void updateData() {
+  // testMillisStart = millis();
+  //noInterrupts();
   if (addPulses1 > 0) {
     pulseCount1 += addPulses1;
     addPulses1 = 0;
     EEPROM.put(0, pulseCount1);
-    EEPROM.commit();
-    hasPulsed1 = true;
   }
   if (addPulses2 > 0) {
     pulseCount2 += addPulses2;
     addPulses2 = 0;
-    EEPROM.put(32, pulseCount2);
-    EEPROM.commit();
-    hasPulsed2 = true;
+    EEPROM.put(64, pulseCount2);
   }
   if (addPulses3 > 0) {
     pulseCount3 += addPulses3;
     addPulses3 = 0;
-    EEPROM.put(64, pulseCount3);
-    EEPROM.commit();
-    hasPulsed3 = true;
+    EEPROM.put(128, pulseCount3);
   }
   if (addPulses4 > 0) {
     pulseCount4 += addPulses4;
     addPulses4 = 0;
-    EEPROM.put(96, pulseCount4);
-    EEPROM.commit();
-    hasPulsed4 = true;
+    EEPROM.put(192, pulseCount4);
   }
 
-  if(millis() - startMillis1 > lastDeltaT1 && hasPulsed1) {
+  EEPROM.commit();
+  //interrupts();
+
+
+  if(millis() - startMillis1 > lastDeltaT1) {
     if(millis() - startMillis1 > 60000) {
       power1 = 0.00f;
     } else {
@@ -182,7 +175,7 @@ void updateData() {
     power1 = 3600.00f/(lastDeltaT1/1000.00f);
   }
 
-  if(millis() - startMillis2 > lastDeltaT2 && hasPulsed2) {
+  if(millis() - startMillis2 > lastDeltaT2) {
     if(millis() - startMillis2 > 60000) {
       power2 = 0.00f;
     } else {
@@ -192,7 +185,7 @@ void updateData() {
     power2 = 3600.00f/(lastDeltaT2/1000.00f);
   }
 
-  if(millis() - startMillis3 > lastDeltaT3 && hasPulsed3) {
+  if(millis() - startMillis3 > lastDeltaT3) {
     if(millis() - startMillis3 > 60000) {
       power3 = 0.00f;
     } else {
@@ -202,7 +195,7 @@ void updateData() {
     power3 = 3600.00f/(lastDeltaT3/1000.00f);
   }
 
-  if(millis() - startMillis4 > lastDeltaT4 && hasPulsed4) {
+  if(millis() - startMillis4 > lastDeltaT4) {
     if(millis() - startMillis4 > 60000) {
       power4 = 0.00f;
     } else {
@@ -227,93 +220,87 @@ void updateData() {
   dtostrf(power1, 2, 2, powerStr1);
   char usageStr1[20];
   dtostrf((double)pulseCount1 / 1000.00f, 3, 3, usageStr1);
-  Serial.printf("Power1: %s, Pulse Count: %d, Usage: %skWh \n", powerStr1, pulseCount1, usageStr1);
 
   char powerStr2[10];
   dtostrf(power2, 2, 2, powerStr2);
   char usageStr2[20];
   dtostrf((double)pulseCount2 / 1000.00f, 3, 3, usageStr2);
-  Serial.printf("Power2: %s, Pulse Count: %d, Usage: %skWh \n", powerStr2, pulseCount2, usageStr2);
 
   char powerStr3[10];
   dtostrf(power3, 2, 2, powerStr3);
   char usageStr3[20];
   dtostrf((double)pulseCount3 / 1000.00f, 3, 3, usageStr3);
-  Serial.printf("Power3: %s, Pulse Count: %d, Usage: %skWh \n", powerStr3, pulseCount3, usageStr3);
 
   char powerStr4[10];
   dtostrf(power4, 2, 2, powerStr4);
   char usageStr4[20];
   dtostrf((double)pulseCount4 / 1000.00f, 3, 3, usageStr4);
+
+
+  Serial.printf("Power1: %s, Pulse Count: %d, Usage: %skWh \n", powerStr1, pulseCount1, usageStr1);
+  Serial.printf("Power2: %s, Pulse Count: %d, Usage: %skWh \n", powerStr2, pulseCount2, usageStr2);
+  Serial.printf("Power3: %s, Pulse Count: %d, Usage: %skWh \n", powerStr3, pulseCount3, usageStr3);
   Serial.printf("Power4: %s, Pulse Count: %d, Usage: %skWh \n\n", powerStr4, pulseCount4, usageStr4);
+
+
+  // Serial.println(millis() - testMillisStart);
 }
 
-void lcdSetup() {
-  Wire.begin(1, 2);
-  u8g2.setI2CAddress(0x7E);
-  u8g2.begin();
-  u8g2.setContrast(200);
-  u8g2.clearBuffer();  // clear the internal memory
-  u8g2.setFont(u8g2_font_ncenB08_tr);
-  u8g2.setFontPosTop();
-  u8g2.setPowerSave(1);
-}
+// void lcdSetup() {
+//   Wire.begin(1, 2);
+//   u8g2.setI2CAddress(0x7E);
+//   u8g2.begin();
+//   u8g2.setContrast(200);
+//   u8g2.clearBuffer();  // clear the internal memory
+//   u8g2.setFont(u8g2_font_ncenB08_tr);
+//   u8g2.setFontPosTop();
+//   u8g2.setPowerSave(1);
+// }
 
 void IRAM_ATTR inttr1() {
-  if (digitalRead(pulsePin1) == HIGH) {
-    raisingTime1 = millis();
-  } else {
-    unsigned long pulseTime = millis() - raisingTime1;
-    // Serial.println(pulseTime);
-    if (pulseTime <= 35 && pulseTime >= 31) {
-      // Serial.println((millis()-startMillis1));
-      lastDeltaT1 = millis() - startMillis1;
-      startMillis1 = millis();
-      addPulses1 += 1;
-    }
+  long deltaT1 = millis() - startMillis1;
+  // Serial.println(deltaT1);
+  if(deltaT1 > 100) {
+    addPulses1 += 1L;
+    lastDeltaT1 = deltaT1;
+    startMillis1 = millis();
+    // Serial.println(lastDeltaT1);
   }
+  
 }
 
 void IRAM_ATTR inttr2() {
-  if (digitalRead(pulsePin2) == HIGH) {
-    raisingTime2 = millis();
-  } else {
-    unsigned long pulseTime = millis() - raisingTime2;
-    // Serial.println(pulseTime);
-    if (pulseTime <= 82 && pulseTime >= 78) {
-      lastDeltaT2 = millis() - startMillis2;
-      startMillis2 = millis();
-      addPulses2 += 1;
-    }
+  long deltaT2 = millis() - startMillis2;
+  // Serial.println(deltaT2);
+  if(deltaT2 > 100) {
+    addPulses2 += 1L;
+    lastDeltaT2 = deltaT2;
+    startMillis2 = millis();
+    // Serial.println(lastDeltaT1);
   }
+
 }
 
 void IRAM_ATTR inttr3() {
-  if (digitalRead(pulsePin3) == HIGH) {
-    raisingTime3 = millis();
-  } else {
-    unsigned long pulseTime = millis() - raisingTime3;
-    // Serial.println(pulseTime);
-    if (pulseTime <= 35 && pulseTime >= 31) {
-      // Serial.println((millis()-startMillis1));
-      lastDeltaT3 = millis() - startMillis3;
-      startMillis3 = millis();
-      addPulses3 += 1;
-    }
+  long deltaT3 = millis() - startMillis3;
+  if(deltaT3 > 100) {
+    addPulses3 += 1L;
+    lastDeltaT3 = deltaT3;
+    startMillis3 = millis();
+    //Serial.println(lastDeltaT1);
   }
+
 }
 
 void IRAM_ATTR inttr4() {
-  if (digitalRead(pulsePin4) == HIGH) {
-    raisingTime4 = millis();
-  } else {
-    unsigned long pulseTime = millis() - raisingTime4;
-    if (pulseTime <= 35 && pulseTime >= 31) {
-      lastDeltaT4 = millis() - startMillis4;
-      startMillis4 = millis();
-      addPulses4 += 1;
-    }
+  long deltaT4 = millis() - startMillis4;
+  if(deltaT4 > 100) {
+    addPulses4 += 1L;
+    lastDeltaT4 = deltaT4;
+    startMillis4 = millis();
+    //Serial.println(lastDeltaT4);
   }
+
 }
 
 void publish(const char* topic, const char* measurement, JsonDocument data) {
@@ -340,7 +327,7 @@ void netSetup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  WiFi.setTxPower(WIFI_POWER_13dBm);
 
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
