@@ -90,12 +90,12 @@ void setup() {
   // delay(2000);
 
   EEPROM.get(0, pulseCount1);
-  // EEPROM.get(64, pulseCount2);
+  EEPROM.get(64, pulseCount2);
   EEPROM.get(128, pulseCount3);
   EEPROM.get(192, pulseCount4);
 
   // EEPROM.put(0, pulseCount1);
-  EEPROM.put(64, pulseCount2);
+  // EEPROM.put(64, pulseCount2);
   // EEPROM.put(128, pulseCount3);
   // EEPROM.put(192, pulseCount4);
   EEPROM.commit();
@@ -381,6 +381,7 @@ void onMqttConnect(bool sessionPresent) {
   // uint16_t packetIdSub = mqttClient.subscribe("test/lol", 2);
   // Serial.print("Subscribing at QoS 2, packetId: ");
   // Serial.println(packetIdSub);
+  mqttClient.subscribe("config/esp32_node", 1);
   timer.attach(dataInterval, updateData);
 }
 
@@ -394,6 +395,8 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   }
 }
 
+JsonDocument configDoc;
+
 void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
   char m_str[len + 1];
   for (int i = 0; i < len; i++) {
@@ -404,6 +407,26 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   Serial.println("Publish received.");
   Serial.println(m_str);
 #endif
+  deserializeJson(configDoc, m_str);
+  if(configDoc["command"] == "set_pulses") {
+    if(configDoc["meter1_pulses"] != NULL) {
+      pulseCount1 = configDoc["meter1_pulses"].as<unsigned long>();
+      EEPROM.put(0, pulseCount1);
+    }
+    if(configDoc["meter2_pulses"] != NULL) {
+      pulseCount2 = configDoc["meter2_pulses"].as<unsigned long>();
+      EEPROM.put(64, pulseCount2);
+    }
+    if(configDoc["meter3_pulses"] != NULL) {
+      pulseCount3 = configDoc["meter3_pulses"].as<unsigned long>();
+      EEPROM.put(128, pulseCount3);
+    }
+    if(configDoc["meter4_pulses"] != NULL) {
+      pulseCount4 = configDoc["meter4_pulses"].as<unsigned long>();
+      EEPROM.put(192, pulseCount4);
+    }
+    EEPROM.commit();
+  }
 }
 
 void setupOTA() {
@@ -422,7 +445,6 @@ void setupOTA() {
 
   ArduinoOTA
     .onStart([]() {
-      noInterrupts();
       String type;
       if (ArduinoOTA.getCommand() == U_FLASH)
         type = "sketch";
@@ -434,7 +456,6 @@ void setupOTA() {
     })
     .onEnd([]() {
       Serial.println("\nEnd");
-      interrupts();
     })
     .onProgress([](unsigned int progress, unsigned int total) {
       Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
@@ -446,7 +467,6 @@ void setupOTA() {
       else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
       else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
       else if (error == OTA_END_ERROR) Serial.println("End Failed");
-      interrupts();
     });
 
   ArduinoOTA.begin();
