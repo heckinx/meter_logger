@@ -137,43 +137,43 @@ unsigned long getTime() {
   return now;
 }
 
-bool pulsedTwice1 = false;
-bool pulsedTwice2 = false;
-bool pulsedTwice3 = false;
-bool pulsedTwice4 = false;
+bool pulsedThrice1 = false;
+bool pulsedThrice2 = false;
+bool pulsedThrice3 = false;
+bool pulsedThrice4 = false;
 
 void updateData() {
   // testMillisStart = millis();
   //noInterrupts();
-  if (addPulses1 > 1) {
+  if (addPulses1 > 2) {
     pulseCount1 += addPulses1;
     addPulses1 = 0;
     EEPROM.put(0, pulseCount1);
-    pulsedTwice1 = true;
+    pulsedThrice1 = true;
   }
-  if (addPulses2 > 1) {
+  if (addPulses2 > 2) {
     pulseCount2 += addPulses2;
     addPulses2 = 0;
     EEPROM.put(64, pulseCount2);
-    pulsedTwice2 = true;
+    pulsedThrice2 = true;
   }
-  if (addPulses3 > 1) {
+  if (addPulses3 > 2) {
     pulseCount3 += addPulses3;
     addPulses3 = 0;
     EEPROM.put(128, pulseCount3);
-    pulsedTwice3 = true;
+    pulsedThrice3 = true;
   }
-  if (addPulses4 > 1) {
+  if (addPulses4 > 2) {
     pulseCount4 += addPulses4;
     addPulses4 = 0;
     EEPROM.put(192, pulseCount4);
-    pulsedTwice4 = true;
+    pulsedThrice4 = true;
   }
 
   EEPROM.commit();
   //interrupts();
 
-  if(lastDeltaT1 > 0 && pulsedTwice1) {
+  if(lastDeltaT1 > 120 && pulsedThrice1) {
     if(millis() - startMillis1 > lastDeltaT1) {
       if(millis() - startMillis1 > 60000) {
         power1 = 0.00f;
@@ -185,7 +185,7 @@ void updateData() {
     }
   }
 
-  if(lastDeltaT2 > 0 && pulsedTwice2) {
+  if(lastDeltaT2 > 200 && pulsedThrice2) {
     if(millis() - startMillis2 > lastDeltaT2) {
       if(millis() - startMillis2 > 60000) {
         power2 = 0.00f;
@@ -197,7 +197,7 @@ void updateData() {
     }
   }
 
-  if(lastDeltaT3 > 0 && pulsedTwice3) {
+  if(lastDeltaT3 > 120 && pulsedThrice3) {
     if(millis() - startMillis3 > lastDeltaT3) {
       if(millis() - startMillis3 > 60000) {
         power3 = 0.00f;
@@ -209,7 +209,7 @@ void updateData() {
     }
   }
 
-  if(lastDeltaT4 > 0 && pulsedTwice4) {
+  if(lastDeltaT4 > 120 && pulsedThrice4) {
     if(millis() - startMillis4 > lastDeltaT4) {
       if(millis() - startMillis4 > 60000) {
         power4 = 0.00f;
@@ -288,7 +288,7 @@ void IRAM_ATTR inttr1() {
 void IRAM_ATTR inttr2() {
   long deltaT2 = millis() - startMillis2;
   // Serial.println(deltaT2);
-  if(deltaT2 > 100) {
+  if(deltaT2 > 180) {
     addPulses2 += 1L;
     lastDeltaT2 = deltaT2;
     startMillis2 = millis();
@@ -399,7 +399,9 @@ void onMqttConnect(bool sessionPresent) {
   // Serial.print("Subscribing at QoS 2, packetId: ");
   // Serial.println(packetIdSub);
   mqttClient.subscribe("config/esp32_node", 1);
-  mqttClient.publish("status/esp32_node", 1, true, "{\"status\": \"online\"}");
+  char buffer[64];
+  sprintf(buffer, "{\"status\": \"online\", \"timestamp\": \"%lu000\"}", getTime());
+  mqttClient.publish("status/esp32_node", 1, true, buffer);
   timer.attach(dataInterval, updateData);
 }
 
